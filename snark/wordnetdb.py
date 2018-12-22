@@ -279,10 +279,10 @@ class WordNetDb:
             if len(gloss) > 0:
                 gloss += ","
             gloss += row1.gloss
-        info.append([parent, s.synset, "synset", s.name, s.pos, gloss])
+        info.append([parent, "synset", s.synset, s.name, s.pos, gloss])
         words = self.get_words_by_sense(s)
         for w in words:
-            info.append([s.synset, w.wordid, "word", w.lemma, w.pos])
+            info.append([s.synset, "word", w.wordid, w.lemma, w.pos])
         return info
 
     # リンクされている概念に紐づく単語をすべて取得する
@@ -298,10 +298,10 @@ class WordNetDb:
             row1 = self.get_synset(row.synset2)
             if row1 != None:
                 cur2.append(
-                    [s.synset, row1.synset, row.link, row1.name, row1.pos])
+                    [s.synset, row.link, row1.synset, row1.name, row1.pos])
         for row2 in cur2:
             info.append(row2)
-            synset = self.get_synset(row2[1])
+            synset = self.get_synset(row2[2])
             info.extend(self.get_synset_info(synset, s.synset))
         return info
 
@@ -336,5 +336,3 @@ def wordnetdb_test():
 
     wn.delete_word('アリス')
     wordnetdb_test_print(wn, 'アリス')
-
-wordnetdb_test()
