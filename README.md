@@ -14,7 +14,8 @@ wn = WordNetDb()
 
 ### DBに単語を追加する
 wn.add_word(単語, 概念ID)
-概念IDは省略可能
+
+* 概念IDは省略可能
 
 ```
 wn.add_word('にゃんこ', 'true_cat')
@@ -36,7 +37,7 @@ wn.add_word('にゃんこ', 'true_cat')
 リスト = wn.get_synset_info(概念オブジェクト)
 
 リストの形式:
-[親概念ID, ID, 種類, 名前, 品詞ID, 例文]
+* [親概念ID, ID, 種類, 名前, 品詞ID, 例文]
 
 種類:
 * word: 概念を示すワードオブジェクト
@@ -57,7 +58,7 @@ wn.add_word('にゃんこ', 'true_cat')
 リスト = wn.get_synlink_info(概念オブジェクト)
 
 リストの形式:
-[親概念ID, ID, 種類, 名前, 品詞ID, 例文]
+* [親概念ID, ID, 種類, 名前, 品詞ID, 例文]
 
 種類:
 * word: 関係する概念を示すワードオブジェクト
