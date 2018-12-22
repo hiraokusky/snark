@@ -2,14 +2,24 @@
 
 日本語ワードネットを利用したDBアクセスライブラリ
 
-## WordNetDb
+## Install
+
+```
+pip install git+https://github.com/hiraokusky/snark
+```
 
 日本語WordNetのsqlite3データベースをダウンロードし、db/wnjpn.dbに置きます。
+
+## WordNetDb
+
+```
+from snark import wordnetdb
+```
 
 ### WordNetDbオブジェクトを取得する
 
 ```
-wn = WordNetDb()
+wn = wordnetdb.WordNetDb()
 ```
 
 ### DBに単語を追加する
