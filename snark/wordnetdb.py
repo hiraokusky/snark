@@ -103,10 +103,10 @@ class WordNetDb:
 
     # ワードを記憶する
     def add_word(self, name, synset=None, pos='n', lang='jpn'):
+        src = 'snark'
         wid = 0
         sid = 0
         commit = False
-        src = 'snark'
 
         # まずワードにあるか調べる
         cur = self.conn.execute(
@@ -127,19 +127,7 @@ class WordNetDb:
         # 概念があるか調べる
         if synset != None:
             name = synset
-        cur = self.conn.execute("select * from synset where name='%s'" % name)
-        c = cur.fetchone()
-        if c == None:
-            # なければ概念に追加
-            while True:
-                sid = self._create_synset_id(pos)
-                if self.get_synset(sid) == None:
-                    break
-            s = (sid, pos, name, src)
-            self.conn.execute('INSERT INTO synset VALUES(?,?,?,?)', s)
-            commit = True
-        else:
-            sid = c[0]
+        (sid, commit) = self._add_synset(name, pos, lang, commit)
 
         if commit:
             # ワードと概念のリンクを追加
@@ -176,9 +164,72 @@ class WordNetDb:
         if commit:
             self.conn.commit()
 
+    def _add_synset(self, name, pos, lang, commit):
+        src = 'snark'
+        c = None
+
+        if len(name) > 0:
+            # 概念があるか調べる
+            cur = self.conn.execute("select * from synset where name='%s'" % name)
+            c = cur.fetchone()
+        if c == None:
+            # なければ概念に追加
+            while True:
+                sid = self._create_synset_id(pos)
+                if self.get_synset(sid) == None:
+                    break
+            if len(name) == 0:
+                name = sid
+            s = (sid, pos, name, src)
+            self.conn.execute('INSERT INTO synset VALUES(?,?,?,?)', s)
+            commit = True
+        else:
+            sid = c[0]
+
+        return (sid, commit)
+
+    # 文を記憶する
+    def add_synsetdef(self, synset, gloss, pos='n', lang='jpn'):
+        src = 'snark'
+        sid = 0
+        commit = False
+
+        (sid, commit) = self._add_synset(synset, pos, lang, commit)
+        if len(synset) == 0:
+            synset = sid
+
+        cur = self.conn.execute(
+            'select * from synset_def where (synset=? and def=? and lang=?)', (sid, gloss, lang))
+        c = cur.fetchone()
+        if c == None:
+            w = (sid, lang, gloss, src)
+            self.conn.execute('INSERT INTO synset_def VALUES(?,?,?,?)', w)
+            commit = True
+
+        if commit:
+            self.conn.commit()
+
+        return synset
+
+    # 文を忘れる
+    def delete_synsetdef(self, gloss, lang='jpn'):
+        commit = False
+
+        cur = self.conn.execute(
+            'select * from synset_def where (def=? and lang=?)', (gloss, lang))
+        for c in cur:
+            self.conn.execute('DELETE FROM synset_def WHERE def=?', (c[2],))
+            commit = True
+
+        if commit:
+            self.conn.commit()
+
     # 名前からワードを取得
-    def get_words(self, name):
-        cur = self.conn.execute("select * from word where lemma='%s'" % name)
+    def get_words(self, name, pos=''):
+        if len(pos) == 0:
+            cur = self.conn.execute("select * from word where lemma='%s'" % name)
+        else:
+            cur = self.conn.execute("select * from word where (lemma='%s' and pos='%s')" % (name, pos))
         words = []
         for row in cur:
             words.append(Word(row[0], row[1], row[2], row[3], row[4]))
@@ -227,7 +278,7 @@ class WordNetDb:
             return None
 
     # 概念から説明を取得
-    def get_synset_defs(self, synset, lang='jpn'):
+    def get_synsetdefs(self, synset, lang='jpn'):
         cur = self.conn.execute(
             "select * from synset_def where (synset='%s' and lang='%s')" % (synset.synset, lang))
         synsets = []
@@ -236,7 +287,7 @@ class WordNetDb:
         return synsets
 
     # 関係先を取得
-    def get_syn_link2(self, synset, link=''):
+    def get_synlink2(self, synset, link=''):
         if len(link) > 0:
             cur = self.conn.execute(
                 "select * from synlink where (synset1='%s' and link='%s')" % (synset.synset, link))
@@ -273,7 +324,7 @@ class WordNetDb:
         info = []
         if not s:
             return info
-        cur1 = self.get_synset_defs(s)
+        cur1 = self.get_synsetdefs(s)
         gloss = ''
         for row1 in cur1:
             if len(gloss) > 0:
@@ -292,7 +343,7 @@ class WordNetDb:
             return info
         # 関係先しか取得しない
         # 関係元しかない関係は、この概念からのリンクがまだ学習されていないことを示す
-        synlinks = self.get_syn_link2(s)
+        synlinks = self.get_synlink2(s)
         cur2 = []
         for row in synlinks:
             row1 = self.get_synset(row.synset2)
@@ -326,9 +377,11 @@ def wordnetdb_test():
     wn = WordNetDb()
 
     wn.add_word('にゃんこ', 'true_cat')
+    wn.add_synsetdef('true_cat', 'にゃんこ大戦争')
     wordnetdb_test_print(wn, 'にゃんこ')
 
     wn.delete_word('にゃんこ')
+    wn.delete_synsetdef('にゃんこ大戦争')
     wordnetdb_test_print(wn, 'ネコ')
 
     wn.add_word('アリス')
