@@ -95,8 +95,7 @@ class WordNetDb:
         self.conn.close()
 
     def _create_word_id(self):
-        n = random.randint(0, 100)
-        return int(time.time()) * 100 + n
+        return int(time.time() * 100)
 
     def _create_synset_id(self, pos):
         return str(self._create_word_id()) + '-' + pos
@@ -127,7 +126,7 @@ class WordNetDb:
         # 概念があるか調べる
         if synset != None:
             name = synset
-        (sid, commit) = self._add_synset(name, pos, lang, commit)
+        (sid, commit) = self._add_synset(name, pos, commit)
 
         if commit:
             # ワードと概念のリンクを追加
@@ -164,13 +163,51 @@ class WordNetDb:
         if commit:
             self.conn.commit()
 
-    def _add_synset(self, name, pos, lang, commit):
+    def _get_synset_by_name(self, name):        
+        cur = self.conn.execute("select * from synset where name='%s'" % name)
+        return cur
+
+    def _get_synlink(self, synset1, synset2, link):
+        cur = self.conn.execute(
+            "select * from synlink where (synset1='%s' and synset2='%s' and link='%s')" % (synset1, synset2, link))
+        return cur
+
+    # 概念リンクを追加する
+    def add_synlink(self, synset1, pos1, synset2, pos2, link):
+        src = 'snark'
+        commit = False
+
+        cur1 = self._get_synset_by_name(synset1)
+        c1 = cur1.fetchone()
+        if c1 == None:
+            (sid1, commit) = self._add_synset(synset1, pos1, commit)
+        else:
+            sid1 = c1[0]
+
+        cur2 = self._get_synset_by_name(synset2)
+        c2 = cur2.fetchone()
+        if c2 == None:
+            (sid2, commit) = self._add_synset(synset2, pos2, commit)
+        else:
+            sid2 = c2[0]
+
+        cur3 = self._get_synlink(sid1, sid2, link)
+        c3 = cur3.fetchone()
+        if c3 == None:
+            s = [sid1, sid2, link, src]
+            self.conn.execute('INSERT INTO synlink VALUES(?,?,?,?)', s)
+            commit = True
+
+        if commit:
+            self.conn.commit()
+
+    def _add_synset(self, name, pos, commit):
         src = 'snark'
         c = None
 
         if len(name) > 0:
             # 概念があるか調べる
-            cur = self.conn.execute("select * from synset where name='%s'" % name)
+            cur = self._get_synset_by_name(name)
             c = cur.fetchone()
         if c == None:
             # なければ概念に追加
@@ -194,7 +231,7 @@ class WordNetDb:
         sid = 0
         commit = False
 
-        (sid, commit) = self._add_synset(synset, pos, lang, commit)
+        (sid, commit) = self._add_synset(synset, pos, commit)
         if len(synset) == 0:
             synset = sid
 
@@ -385,6 +422,7 @@ def wordnetdb_test():
     wordnetdb_test_print(wn, 'ネコ')
 
     wn.add_word('アリス')
+    wn.add_synlink('アリス', 'n', 'アリスの不思議な国', 'n', '主人公')
     wordnetdb_test_print(wn, 'アリス')
 
     wn.delete_word('アリス')
