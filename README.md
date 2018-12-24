@@ -38,7 +38,7 @@ wn.add_word('にゃんこ', 'true_cat')
 概念オブジェクトリスト = wn.get_synsets(ワードオブジェクト)
 
 ### 概念の例文を取得する
-例文オブジェクトリスト = wn.get_synset_defs(概念オブジェクト)
+例文オブジェクトリスト = wn.get_synsetdefs(概念オブジェクト)
 
 ### 概念に紐づく単語のリストを取得する
 ワードオブジェクトリスト = wn.get_words_by_sense(概念オブジェクト)
