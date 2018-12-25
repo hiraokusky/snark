@@ -372,8 +372,38 @@ class WordNetDb:
             hierarchy_dict.append(SynLink(w[0], w[1], w[2]))
         return hierarchy_dict
 
-    # 単語と同じ概念を持つ同義語をすべて取得する
+    def get_word_info_by_lemma(self, lemma):
+        """
+        単語と同じ概念を持つ同義語をすべて取得する
+        Parameters
+        ----------
+        lemma : str
+            単語
+        Returns
+        -------
+        [[synset-id type id name pos-id] ...]
+            概念
+            概念のワード
+        """
+        cur = self.get_words(lemma)
+        result = []
+        for w in cur:
+            result.extend(self.get_word_info(w))
+        return result
+
     def get_word_info(self, w):
+        """
+        ワードと同じ概念を持つ同義語をすべて取得する
+        Parameters
+        ----------
+        w : Word
+            ワードオブジェクト
+        Returns
+        -------
+        [[synset-id type id name pos-id] ...]
+            概念
+            概念のワード
+        """
         info = []
         if not w:
             return info
@@ -382,14 +412,68 @@ class WordNetDb:
             info.extend(self.get_synset_info(s))
         return info
 
+    def get_wordlink_info_by_lemma(self, lemma):
+        """
+        単語と同じ概念に関係する概念を持つ同義語をすべて取得する
+        Parameters
+        ----------
+        lemma : str
+            単語
+        Returns
+        -------
+        [[synset-id type id name pos-id] ...]
+            概念との関係
+            関係する概念
+            関係する概念のワード
+        """
+        cur = self.get_words(lemma)
+        result = []
+        for w in cur:
+            result.extend(self.get_wordlink_info(w))
+        return result
+
     # 関連する概念の単語をすべて取得する
     def get_wordlink_info(self, w):
+        """
+        ワードと同じ概念に関係する概念を持つ同義語をすべて取得する
+        Parameters
+        ----------
+        w : Word
+            ワードオブジェクト
+        Returns
+        -------
+        [[synset-id type id name pos-id] ...]
+            概念との関係
+            関係する概念
+            関係する概念のワード
+        """
         info = []
         if not w:
             return info
         cur0 = self.get_synsets(w)
         for s in cur0:
             info.extend(self.get_synlink_info(s))
+        return info
+
+    def get_synlink_info_by_name(self, synset_name):
+        """
+        概念名の概念に関係する概念を持つ同義語をすべて取得する
+        Parameters
+        ----------
+        synset_name : str
+            概念名
+        Returns
+        -------
+        [[synset-id type id name pos-id] ...]
+            概念との関係
+            関係する概念
+            関係する概念のワード
+        """
+        cur0 = self._get_synset_by_name(synset_name)
+        info = []
+        for s in cur0:
+            synset = SynSet(s[0], s[1], s[2], s[3])
+            info.extend(self.get_synlink_info(synset))
         return info
 
     # 概念に紐づく単語をすべて取得する
@@ -429,30 +513,40 @@ class WordNetDb:
             info.extend(self.get_synset_info(synset, s.synset))
         return info
 
-    def get_synlink_info_by_name(self, synset_name):
-        cur0 = self._get_synset_by_name(synset_name)
+    def get_imagenet_uris(self, lemma):
+        """
+        ワードを含む概念のImageNetのURIを取得する
+        Parameters
+        ----------
+        synset_name : str
+            概念名
+        Returns
+        -------
+        [ImageNet-URI ...]
+            ImageNetのURI
+        """
         info = []
-        for s in cur0:
-            synset = SynSet(s[0], s[1], s[2], s[3])
-            info.extend(self.get_synlink_info(synset))
-        return info
-
-    def show_word_info(self, w):
-        for v in self.get_word_info(w):
-            print(v)
-
-    def show_wordlink_info(self, w):
-        for v in self.get_wordlink_info(w):
-            print(v)
-
+        if not lemma:
+            return info
+        base = 'http://image-net.org/synset?wnid='
+        cur = self.get_words(lemma)
+        result = []
+        for c in cur:
+            cur0 = self.get_synsets(c)
+            for s in cur0:
+                s.synset
+                result.append(base + s.pos + s.synset[:-2])
+        return result
 
 def wordnetdb_test_print(wn, word):
     print(word)
-    cur = wn.get_words(word)
+    cur = wn.get_word_info_by_lemma(word)
     for w in cur:
-        wn.show_word_info(w)
-        print('SynLink')
-        wn.show_wordlink_info(w)
+        print(w)
+    print('SynLink')
+    cur = wn.get_wordlink_info_by_lemma(word)
+    for w in cur:
+        print(w)
 
 def wordnetdb_test():
     wn = WordNetDb()
@@ -471,3 +565,13 @@ def wordnetdb_test():
 
     wn.delete_word('アリス')
     wordnetdb_test_print(wn, 'アリス')
+
+# wordnetdb_test()
+
+# wn = WordNetDb()
+# result = wn.get_imagenet_uris('アリス')
+# print(result)
+
+# cur = wn.get_synlink_info_by_name('true_cat')
+# for w in cur:
+#     print(w)
