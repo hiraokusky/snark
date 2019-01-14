@@ -1,5 +1,5 @@
 """
-Copyright 2018 hiraokusky
+Copyright 2018-2019 hiraokusky
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -115,6 +115,11 @@ class WordNetDb:
     def _get_synset_by_name(self, name):
         cur = self.conn.execute("select * from synset where name='%s'" % name)
         return cur
+
+    def _get_synset1_by_name(self, name):
+        cur = self.conn.execute("select * from synset where name='%s'" % name)
+        s = cur.fetchone()
+        return SynSet(s[0], s[1], s[2], s[3])
 
     def _get_synlink(self, synset1, synset2, link):
         cur = self.conn.execute(
@@ -455,7 +460,7 @@ class WordNetDb:
             info.extend(self.get_synlink_info(s))
         return info
 
-    def get_synlink_info_by_name(self, synset_name):
+    def get_synlink_info_by_name(self, synset_name, link=''):
         """
         概念名の概念に関係する概念を持つ同義語をすべて取得する
         Parameters
@@ -469,11 +474,13 @@ class WordNetDb:
             関係する概念
             関係する概念のワード
         """
+        # 一致するsynsetリストを取得
         cur0 = self._get_synset_by_name(synset_name)
         info = []
         for s in cur0:
             synset = SynSet(s[0], s[1], s[2], s[3])
-            info.extend(self.get_synlink_info(synset))
+            # synsetのlinkを取得
+            info.extend(self.get_synlink_info(synset, link))
         return info
 
     # 概念に紐づく単語をすべて取得する
@@ -491,26 +498,6 @@ class WordNetDb:
         words = self.get_words_by_sense(s)
         for w in words:
             info.append([s.synset, "word", w.wordid, w.lemma, w.pos])
-        return info
-
-    # リンクされている概念に紐づく単語をすべて取得する
-    def get_synlink_info(self, s):
-        info = []
-        if not s:
-            return info
-        # 関係先しか取得しない
-        # 関係元しかない関係は、この概念からのリンクがまだ学習されていないことを示す
-        synlinks = self.get_synlink2(s)
-        cur2 = []
-        for row in synlinks:
-            row1 = self.get_synset(row.synset2)
-            if row1 != None:
-                cur2.append(
-                    [s.synset, row.link, row1.synset, row1.name, row1.pos])
-        for row2 in cur2:
-            info.append(row2)
-            synset = self.get_synset(row2[2])
-            info.extend(self.get_synset_info(synset, s.synset))
         return info
 
     def get_imagenet_uris(self, lemma):
@@ -537,6 +524,107 @@ class WordNetDb:
                 s.synset
                 result.append(base + s.pos + s.synset[:-2])
         return result
+
+    def add_frame(self, prev, frame):
+        """
+        フレームを記憶する
+        Notes
+        -----
+        前のフレームを指定して、フレーム文を記憶します。
+        """
+        # フレームをsynsetとして記憶する
+        # 親フレームとはframeでリンクする
+        self.add_synlink(prev, 'f', frame, 'f', 'frame')
+
+    def add_phrase(self, prev, phrase):
+        """
+        文を記憶する
+        Notes
+        -----
+        フレームと前の文を指定して、文を記憶します。
+        Parameters
+        ----------
+        prev : str
+            フレームもしくは前のフレーズ
+        """
+        # フレーズをsynsetdefとして記憶する
+        synset = self.add_synsetdef('', phrase, 's')
+        if len(prev) > 0:
+            # 直前のフレーズがあれば直前とnextでリンクする
+            self.add_synlink(prev, 's', synset, 's', 'next')
+        return synset
+
+    # リンクされている概念に紐づく単語をすべて取得する
+    def get_synlink_info(self, s, link=''):
+        info = []
+        if not s:
+            return info
+        # 関係先しか取得しない
+        # 関係元しかない関係は、この概念からのリンクがまだ学習されていないことを示す
+        synlinks = self.get_synlink2(s, link)
+        cur2 = []
+
+        # 関係先の概念を取得
+        for row in synlinks:
+            row1 = self.get_synset(row.synset2)
+            if row1 != None:
+                cur2.append(
+                    [s.synset, row.link, row1.synset, row1.name, row1.pos])
+
+        # 概念定義と関係するワードを取得
+        for row2 in cur2:
+            info.append(row2)
+            synset = self.get_synset(row2[2])
+            info.extend(self.get_synset_info(synset, s.synset))
+        return info
+
+    def get_synlink_next_by_name(self, synset_name, link='next'):
+        """
+        概念のnext linkを取得する
+        """
+        synset = self._get_synset1_by_name(synset_name)
+        return self.get_synlink_next(synset, link)
+
+    def get_synlink_next(self, s, link=''):
+        """
+        linkでつながっている概念をすべて取得する
+        """
+        info = []
+        if not s:
+            return info
+        # 関係先しか取得しない
+        # 関係元しかない関係は、この概念からのリンクがまだ学習されていないことを示す
+        synlinks = self.get_synlink2(s, link)
+        cur2 = []
+
+        # 関係先の概念を取得
+        for row in synlinks:
+            row1 = self.get_synsetdef_info(SynSet(row.synset2))
+            if row1 != None:
+                row2 = row1[0]
+                nxt = row2[2]
+                cur2.append(
+                    [s.synset, row.link, nxt, row2[1], row2[2], row2[5]])
+                cur3 = self._get_synset1_by_name(nxt)
+                cur2.extend(self.get_synlink_next(cur3))
+
+        return cur2
+
+    def get_synsetdef_info(self, s, parent=''):
+        """
+        概念名を持つ概念定義を取得する
+        """
+        info = []
+        if not s:
+            return info
+        cur1 = self.get_synsetdefs(s)
+        gloss = ''
+        for row1 in cur1:
+            if len(gloss) > 0:
+                gloss += ","
+            gloss += row1.gloss
+        info.append([parent, "synsetdef", s.synset, s.name, s.pos, gloss])
+        return info
 
 def wordnetdb_test_print(wn, word):
     print(word)
@@ -566,12 +654,23 @@ def wordnetdb_test():
     wn.delete_word('アリス')
     wordnetdb_test_print(wn, 'アリス')
 
+    result = wn.get_imagenet_uris('アリス')
+    print(result)
+
+def wordnetdb_test2():
+    wn = WordNetDb()
+    title = 'ルイス・キャロル'
+    wn.add_frame('$root', title)
+    frame = 'アリスの不思議な国'
+    wn.add_frame(title, frame)
+    phrase = frame
+    phrase = wn.add_phrase(phrase, '主人公')
+    phrase = wn.add_phrase(phrase, 'は')
+    phrase = wn.add_phrase(phrase, 'アリス')
+
+    cur = wn.get_synlink_next_by_name(frame)
+    for w in cur:
+        print(w)
+
 # wordnetdb_test()
-
-# wn = WordNetDb()
-# result = wn.get_imagenet_uris('アリス')
-# print(result)
-
-# cur = wn.get_synlink_info_by_name('true_cat')
-# for w in cur:
-#     print(w)
+# wordnetdb_test2()
