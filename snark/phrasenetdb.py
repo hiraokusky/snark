@@ -105,6 +105,7 @@ class PhraseNetDb:
             dict_word = p[1]
             dict_synset = p[2]
             dict_pron = p[3]
+            q = [dict_pos, dict_word, dict_synset, dict_pron]
 
             if len(dict_pos) > 0:
                 if len(pret) > 0:
@@ -136,17 +137,21 @@ class PhraseNetDb:
                     w = self.get_verb_ends(s, dict_word)
                     if w != None:
                         dict_word = w
-                        p[1] = w
+                        q[1] = w
                         # 次の文字が平仮名でなければvではない
                         if len(s) > len(w) and not self.kn.is_hiragana(s[len(w):][0]):
                             continue
+                    else:
+                        continue
 
                 if dict_pos[0] == 'a':
                     # 形容詞の活用と一致するものを選択
                     w = self.get_adj_ends(s, dict_word)
                     if w != None:
                         dict_word = w
-                        p[1] = w
+                        q[1] = w
+                    else:
+                        continue
 
             if len(dict_word) > 0 and s.startswith(dict_word):
                 match = False
@@ -166,9 +171,9 @@ class PhraseNetDb:
                     # 最長一致する
                     if len(dict_word) > l:
                         l = len(dict_word)
-                        matches.insert(0, p)
+                        matches.insert(0, q)
                     else:
-                        matches.append(p)
+                        matches.append(q)
 
         return matches
 
@@ -237,4 +242,7 @@ class PhraseNetDb:
 # p.load()
 # print(p.get_verb_ends('知ってるな', '知る'))
 # print(p.get_adj_ends('美しくってね', '美しい'))
-# print(p.get_phrases('知識ってね'))
+# print(p.get_phrases('知識'))
+# print(p.get_phrases('知識'))
+# print(p.get_phrases('知ってね'))
+# print(p.get_phrases('知ってね'))
