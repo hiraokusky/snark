@@ -1,5 +1,5 @@
 """
-Copyright 2018 hiraokusky
+Copyright 2018-2019 hiraokusky
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -24,9 +24,9 @@ from snark import wordnetdb, kanadb
 
 class PhraseNetDb:
     """
-    n=名詞, v=動詞, a=形容詞, r=副詞
+    # root synset
 
-    s=
+    r=
     主に文の始めに現れるフレーズ。
     接続詞の他、感嘆詞など。
 
@@ -36,33 +36,46 @@ class PhraseNetDb:
     p:
     名詞に接続するフレーズ。名詞に役割を与える。
 
-    o:
-    人名に接続するフレーズ。お互いの関係を与える。
-
-    u:
-    動詞で終わる文、つまり、変化を示す文の終わりに現れるフレーズ。
-
     t:
     名詞で終わる文、つまり、等価を示す文の終わりに現れるフレーズ。
     であろう、など。
 
+    v:
+    動詞
+
+    w:
+    動詞で終わる文、つまり、変化を示す文の終わりに現れるフレーズ。
+
     f:
     会話文の終わりに現れる、人の特徴を示すフレーズ。
     ～だぜ、など。
+    
+    # 深層格
+    # 動作主格 case_agentive
+    # 経験者格 case_experiencer
+    # 道具格 case_instrumental
+    # 対象格 case_objective
+    # 源泉格 case_source
+    # 目標格 case_goal
+    # 場所格 case_locative
+    # 時間格 case_time
+    # 経路格 case_path
     """
 
+    # かな変換辞書
     kn = kanadb.KanaDb()
 
     # 外部辞書
     startdict = pd.DataFrame()
 
-    # パターン辞書
     def load(self):
+        """
+        フレーズ辞書をロードする
+        """
         self.startdict = pd.read_csv('dict/phrases.csv', header=None)
         self.startdict = self.startdict.fillna('')
         
-    def match_phrase_type(self, t, word):
-        matches = []
+    def _match_phrase_type(self, t, word):
         for p in self.startdict.values:
             dict_pos = p[0]
             dict_word = p[1]
@@ -70,14 +83,19 @@ class PhraseNetDb:
                 return True
         return False
 
-    def get_phrases(self, s, pre, pret):
+    def get_phrases(self, s, pre='', pret=''):
         """
         一致するフレーズを取得する
+
         Parameters
         ----------
-        s: 文字列
-        pre: 直前の文字
-        pret: 直前の品詞
+        s: 検査文字列(必須)
+        pre: 直前の文字(なければ'')
+        pret: 直前の品詞(なければ'')
+
+        Returns
+        -------
+        先頭一致するフレーズの最長順のリスト
         """
         pre = self.kn.toRomaji(pre)
         l = 0
@@ -85,6 +103,8 @@ class PhraseNetDb:
         for p in self.startdict.values:
             dict_pos = p[0]
             dict_word = p[1]
+            dict_synset = p[2]
+            dict_pron = p[3]
 
             if len(dict_pos) > 0:
                 if len(pret) > 0:
@@ -111,18 +131,14 @@ class PhraseNetDb:
                         continue
 
             if len(dict_pos) > 0:
-                # 動詞の場合、活用して一致するものを選ぶ
                 if dict_pos[0] == 'v':
-                    # if len(pret) > 0:
-                    #     # 前が名詞のときは動詞にできない
-                    #     if pret[0]  == 'n':
-                    #         continue
                     # 動詞の活用と一致するものを選択
                     w = self.get_verb_ends(s, dict_word)
                     if w != None:
                         dict_word = w
                         p[1] = w
                 if dict_pos[0] == 'a':
+                    # 形容詞の活用と一致するものを選択
                     w = self.get_adj_ends(s, dict_word)
                     if w != None:
                         dict_word = w
@@ -135,11 +151,11 @@ class PhraseNetDb:
                 if len(pre) == 0 or len(dict_pos) <= 1:
                     match = True
                 # 接続パターンがある場合はパターンに一致する場合のみ一致
-                elif pre.endswith(dict_pos[1:]):
+                elif pre.endswith(dict_pron):
                     match = True
 
                 # # 文終わりf品詞の場合、直後はe記号でないといけない
-                if dict_pos[0] == 'f' and not self.match_phrase_type('e', s[len(dict_word):]):
+                if dict_pos[0] == 'f' and not self._match_phrase_type('e', s[len(dict_word):]):
                     match = False
 
                 if match:
@@ -149,9 +165,13 @@ class PhraseNetDb:
                         matches.insert(0, p)
                     else:
                         matches.append(p)
+
         return matches
 
     def get_verb_ends(self, s, word):
+        """
+        get_verb_ends(元の文字列, 動詞原型) -> 元の文字列の動詞活用形部分
+        """
         c = word[len(word) - 1]
         w = word[:len(word) - 1]
         if c == 'う': # 会う
@@ -197,10 +217,13 @@ class PhraseNetDb:
         return None
 
     def get_adj_ends(self, s, word):
+        """
+        get_adj_ends(元の文字列, 形容詞原型) -> 元の文字列の形容詞活用形部分
+        """
         c = word[len(word) - 1]
         w = word[:len(word) - 1]
         if c == 'い': # 楽しい
-            d = [ 'い', 'な', 'かった', 'く', 'そう', 'くて', 'くない']
+            d = [ 'い', 'な', 'かった', 'く', 'そう', 'くて', 'くない', 'けれ']
             for e in d:
                 if s.startswith(w + e):
                     return w + e
@@ -208,3 +231,4 @@ class PhraseNetDb:
 
 # p = PhraseNetDb()
 # print(p.get_verb_ends('知ってるな', '知る'))
+# print(p.get_adj_ends('美しくってね', '美しい'))
