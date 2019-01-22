@@ -23,3 +23,10 @@ class KanaDb:
 
     def toRomaji(self, s):
         return s.translate(self.table)
+
+    def is_hiragana(self, c):
+        return c in self.kana_romaji
+
+# kana = KanaDb()
+# print(kana.is_hiragana('知'))
+# print(kana.is_hiragana('ち'))

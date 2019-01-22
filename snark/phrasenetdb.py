@@ -137,6 +137,10 @@ class PhraseNetDb:
                     if w != None:
                         dict_word = w
                         p[1] = w
+                        # 次の文字が平仮名でなければvではない
+                        if len(s) > len(w) and not self.kn.is_hiragana(s[len(w):][0]):
+                            continue
+
                 if dict_pos[0] == 'a':
                     # 形容詞の活用と一致するものを選択
                     w = self.get_adj_ends(s, dict_word)
@@ -230,5 +234,7 @@ class PhraseNetDb:
         return None
 
 # p = PhraseNetDb()
+# p.load()
 # print(p.get_verb_ends('知ってるな', '知る'))
 # print(p.get_adj_ends('美しくってね', '美しい'))
+# print(p.get_phrases('知識ってね'))
