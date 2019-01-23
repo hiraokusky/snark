@@ -17,10 +17,12 @@ import pandas as pd
 import numpy as np
 import re
 import json
-import sys,os
+import sys
+import os
 
 from wordnetdb import WordNetDb
 from kanadb import KanaDb
+
 
 class PhraseNetDb:
     """
@@ -49,7 +51,7 @@ class PhraseNetDb:
     f:
     会話文の終わりに現れる、人の特徴を示すフレーズ。
     ～だぜ、など。
-    
+
     # 深層格
     # 動作主格 case_agentive
     # 経験者格 case_experiencer
@@ -82,20 +84,11 @@ class PhraseNetDb:
         """
         フレーズ辞書をWordNetDbからメモリにロードする
         """
-        d = []
-        d = self.wn.get_synset_def_all(d, 'r')
-        d = self.wn.get_synset_def_all(d, 'a')
-        d = self.wn.get_synset_def_all(d, 'n')
-        d = self.wn.get_synset_def_all(d, 'p')
-        d = self.wn.get_synset_def_all(d, 't')
-        d = self.wn.get_synset_def_all(d, 'v')
-        d = self.wn.get_synset_def_all(d, 'w')
-        d = self.wn.get_synset_def_all(d, 'f')
-        d = self.wn.get_synset_def_all(d, 'e')
+        d = self.wn.get_synset_def_all(
+            ['r', 'a', 'n', 'p', 't', 'v', 'w', 'f', 'e'])
         for c in d:
-            # print(c[0], c[1], c[2], c[3])
             dict_pos = c[0]
-            dict_weight = c[3]
+            dict_src = c[3]
             dict_pron = ''
             cc = c[2].split()
             if len(cc) > 1:
@@ -105,13 +98,15 @@ class PhraseNetDb:
                 dict_word = cc[0]
             else:
                 continue
-            tmp_se = pd.Series( [dict_pos, dict_word, dict_weight, dict_pron ] )
-            self.startdict = self.startdict.append( tmp_se, ignore_index=True )
+            tmp_se = pd.Series([dict_pos, dict_word, dict_src, dict_pron])
+            self.startdict = self.startdict.append(tmp_se, ignore_index=True)
+            # print(dict_pos, dict_word, dict_src, dict_pron)
 
     def save_all(self):
         """
         フレーズ辞書をWordNetDnに保存する
         """
+        data = []
         for p in self.startdict.values:
             dict_pos = p[0]
             if len(dict_pos) > 0 and dict_pos != 'synset':
@@ -120,12 +115,8 @@ class PhraseNetDb:
                 dict_pron = p[3]
                 if len(dict_pron) > 0:
                     dict_word = dict_pron + ' ' + dict_word
-                print(dict_pos, dict_word)
-                self.wn.update_synset_def(dict_pos, dict_word, '0', commit=False)
-        self.wn.commit()
-
-    def add_synsetdef(self, synset, gloss, pos='n', lang='jpn'):
-        return
+                data.append((dict_pos, 'jpn', dict_word, 'pnjpn.db'))
+        self.wn.insert_synset_def_all(data)
 
     def _match_phrase_type(self, t, word):
         for p in self.startdict.values:
@@ -175,13 +166,13 @@ class PhraseNetDb:
                         else:
                             continue
                     # 動詞接続wの場合、直前は動詞vでないといけない
-                    if dict_pos[0] == 'w' and pret[0]  != 'v':
+                    if dict_pos[0] == 'w' and pret[0] != 'v':
                         continue
                     # 名詞終わり文tの場合、直前は名詞nでないといけない
-                    if dict_pos[0] == 't' and pret[0]  != 'n':
+                    if dict_pos[0] == 't' and pret[0] != 'n':
                         continue
                     # 名詞後付加pの場合、直前は名詞nでないといけない
-                    if dict_pos[0] == 'p' and pret[0]  != 'n':
+                    if dict_pos[0] == 'p' and pret[0] != 'n':
                         continue
 
             if len(dict_pos) > 0:
@@ -236,43 +227,43 @@ class PhraseNetDb:
         """
         c = word[len(word) - 1]
         w = word[:len(word) - 1]
-        if c == 'う': # 会う
-            d = [ 'わ', 'い', 'う', 'え', 'お', 'った', 'って']
+        if c == 'う':  # 会う
+            d = ['わ', 'い', 'う', 'え', 'お', 'った', 'って']
             for e in d:
                 if s.startswith(w + e):
                     return w + e
-        if c == 'く': # 書く
-            d = [ 'か', 'き', 'く', 'け', 'こ', 'いた', 'いて']
+        if c == 'く':  # 書く
+            d = ['か', 'き', 'く', 'け', 'こ', 'いた', 'いて']
             for e in d:
                 if s.startswith(w + e):
                     return w + e
-        if c == 'す': # 指す
-            d = [ 'さ', 'し', 'す', 'せ', 'そ', 'した', 'して']
+        if c == 'す':  # 指す
+            d = ['さ', 'し', 'す', 'せ', 'そ', 'した', 'して']
             for e in d:
                 if s.startswith(w + e):
                     return w + e
-        if c == 'つ': # 勝つ
-            d = [ 'た', 'ち', 'つ', 'て', 'と', 'った', 'って']
+        if c == 'つ':  # 勝つ
+            d = ['た', 'ち', 'つ', 'て', 'と', 'った', 'って']
             for e in d:
                 if s.startswith(w + e):
                     return w + e
-        if c == 'ぬ': # 死ぬ
-            d = [ 'な', 'に', 'ぬ', 'ね', 'の', 'んだ', 'んで']
+        if c == 'ぬ':  # 死ぬ
+            d = ['な', 'に', 'ぬ', 'ね', 'の', 'んだ', 'んで']
             for e in d:
                 if s.startswith(w + e):
                     return w + e
-        if c == 'ぶ': # 尊ぶ
-            d = [ 'ば', 'び', 'ぶ', 'べ', 'ぼ', 'んだ', 'んで']
+        if c == 'ぶ':  # 尊ぶ
+            d = ['ば', 'び', 'ぶ', 'べ', 'ぼ', 'んだ', 'んで']
             for e in d:
                 if s.startswith(w + e):
                     return w + e
-        if c == 'む': # 噛む
-            d = [ 'ま', 'み', 'む', 'め', 'も', 'んだ', 'んで']
+        if c == 'む':  # 噛む
+            d = ['ま', 'み', 'む', 'め', 'も', 'んだ', 'んで']
             for e in d:
                 if s.startswith(w + e):
                     return w + e
-        if c == 'る': # 得る→得て, 探る→探って
-            d = [ 'ら', 'り', 'る', 'れ', 'ろ', 'よ', 'った', 'って', 'た', 'て', '']
+        if c == 'る':  # 得る→得て, 探る→探って
+            d = ['ら', 'り', 'る', 'れ', 'ろ', 'よ', 'った', 'って', 'た', 'て', '']
             for e in d:
                 if s.startswith(w + e):
                     return w + e
@@ -284,18 +275,20 @@ class PhraseNetDb:
         """
         c = word[len(word) - 1]
         w = word[:len(word) - 1]
-        if c == 'い': # 楽しい
-            d = [ 'い', 'な', 'かった', 'く', 'そう', 'くて', 'くない', 'けれ']
+        if c == 'い':  # 楽しい
+            d = ['い', 'な', 'かった', 'く', 'そう', 'くて', 'くない', 'けれ']
             for e in d:
                 if s.startswith(w + e):
                     return w + e
         return None
 
-p = PhraseNetDb()
-p.load_all()
-# p.save_all()
 
-print(p.get_verb_ends('知ってるな', '知る'))
-print(p.get_adj_ends('美しくってね', '美しい'))
-print(p.get_phrases('知識'))
-print(p.get_phrases('知ってね'))
+# p = PhraseNetDb()
+# p.load_file()
+# p.save_all()
+# p.load_all()
+
+# print(p.get_verb_ends('知ってるな', '知る'))
+# print(p.get_adj_ends('美しくってね', '美しい'))
+# print(p.get_phrases('知識'))
+# print(p.get_phrases('知ってね'))

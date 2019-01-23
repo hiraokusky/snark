@@ -19,6 +19,7 @@ import random
 import networkx as nx
 import matplotlib
 
+
 class Word:
     wordid = 0  # ワードID(8桁は予約)
     lang = 'jpn'  # 言語
@@ -33,24 +34,26 @@ class Word:
         self.pron = pron
         self.pos = pos
 
+
 class Sense:
     synset = ''  # 参照概念ID
     wordid = 0  # 参照ワードID
     lang = 'jpn'  # 言語
-    rank = None  # 
-    lexid = None  # 
+    rank = None  #
+    lexid = None  #
     freq = None
-    src = ''  # 
+    src = ''  #
 
     def __init__(self, synset, src=''):
         self.synset = synset
         self.src = src
 
+
 class SynSet:
     synset = ''  # 概念ID(8桁は予約)
     pos = 'n'  # 品詞
     name = ''  # 概念
-    src = ''  # 
+    src = ''  #
 
     def __init__(self, synset, pos='', name='', src=''):
         self.synset = synset
@@ -58,17 +61,19 @@ class SynSet:
         self.name = name
         self.src = src
 
+
 class SynSetDef:
     synset = ''  # 参照概念ID
     name = ''  # 概念名
     lang = 'jpn'  # 言語
     gloss = ''  # 例文
-    sid = '0'  # 
+    sid = '0'  #
 
     def __init__(self, synset, name, gloss):
         self.synset = synset
         self.name = name
         self.gloss = gloss
+
 
 class SynLink:
     synset1 = ''  # 概念ID
@@ -80,6 +85,7 @@ class SynLink:
         self.synset1 = synset1
         self.synset2 = synset2
         self.link = link
+
 
 class WordNetDb:
     def __init__(self):
@@ -94,35 +100,38 @@ class WordNetDb:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.conn.close()
 
-    def get_synset_def_all(self, d, synset, lang='jpn'):
+    def get_synset_def_all(self, synsets, lang='jpn'):
         """
-        synsetに対応するsynset_defすべてをarrayに取得する
+        synsetリストに対応するsynset_defすべてを取得する
         """
-        cur = self.conn.execute(
-            'select * from synset_def where (synset=? and lang=?)', (synset, lang))
-        for c in cur:
-            d.append(c)
-        return d
+        c = self.conn.cursor()
+        c.execute('SELECT * FROM synset_def WHERE synset in ({0})'.format(
+            ', '.join('?' for _ in synsets)), synsets)
+        cur = c.fetchall()
+        return cur
 
-    def _get_synset_def(self, gloss, lang='jpn'):
-        cur = self.conn.execute(
-            'select * from synset_def where (def=? and lang=?)', (gloss, lang))
-        c = cur.fetchone()
-        return c
-
-    def update_synset_def(self, synset, gloss, sid, lang='jpn', commit=True):
+    def insert_synset_def_all(self, data):
         """
-        synset_defを作成する, glossが一致する場合は更新する
+        dataリストのうちsynset, defのペアが存在しないデータだけDBに追加する
         """
-        c = self._get_synset_def(gloss, lang)
-        if c != None:
-            self.conn.execute('UPDATE synset_def SET synset=?, sid=? where (def=? and lang=?)', (synset, sid, gloss, lang))
-        else:
-            c = (synset, lang, gloss, sid)
-            self.conn.execute('INSERT INTO synset_def VALUES(?,?,?,?)', c)
-
-        if commit:
-            self.conn.commit()
+        c = self.conn.cursor()
+        inserts = []
+        updates = []
+        for d in data:
+            synset = d[0]
+            lang = d[1]
+            gloss = d[2]
+            cur = c.execute(
+                'select * from synset_def where (synset=? and def=? and lang=?)', (synset, gloss, lang))
+            e = cur.fetchone()
+            if e != None:
+                updates.append(e)
+            else:
+                inserts.append(d)
+        if len(inserts) > 0:
+            sql = 'INSERT INTO synset_def VALUES(?,?,?,?)'
+            c.executemany(sql, inserts)
+        self.conn.commit()
 
     def commit(self):
         """
@@ -143,9 +152,11 @@ class WordNetDb:
 
     def _get_word_by_name_nolang(self, name, pos):
         if len(pos) > 0:
-            cur = self.conn.execute("select * from word where (lemma='%s' and pos='%s')" % (name, pos))
+            cur = self.conn.execute(
+                "select * from word where (lemma='%s' and pos='%s')" % (name, pos))
         else:
-            cur = self.conn.execute("select * from word where lemma='%s'" % name)
+            cur = self.conn.execute(
+                "select * from word where lemma='%s'" % name)
         return cur
 
     def _get_synset_by_name(self, name):
@@ -662,6 +673,7 @@ class WordNetDb:
         info.append([parent, "synsetdef", s.synset, s.name, s.pos, gloss])
         return info
 
+
 def wordnetdb_test_print(wn, word):
     print(word)
     cur = wn.get_word_info_by_lemma(word)
@@ -671,6 +683,7 @@ def wordnetdb_test_print(wn, word):
     cur = wn.get_wordlink_info_by_lemma(word)
     for w in cur:
         print(w)
+
 
 def wordnetdb_test():
     wn = WordNetDb()
@@ -692,6 +705,7 @@ def wordnetdb_test():
 
     result = wn.get_imagenet_uris('アリス')
     print(result)
+
 
 def wordnetdb_test2():
     wn = WordNetDb()

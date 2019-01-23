@@ -19,6 +19,7 @@ from selenium.webdriver.chrome.options import Options
 import re
 import urllib.parse
 
+
 class WebReader:
     """
     ALICE WEB
@@ -47,7 +48,8 @@ class WebReader:
         """
         Google翻訳結果を取得する(日→英)
         """
-        url = 'https://translate.google.com/?hl=ja&langpair=ja%7Cen&text=' + urllib.parse.quote(s)
+        url = 'https://translate.google.com/?hl=ja&langpair=ja%7Cen&text=' + \
+            urllib.parse.quote(s)
         soup = self.get_web_page(url)
         res = soup.select_one("span.tlid-translation.translation")
         return res
@@ -56,7 +58,8 @@ class WebReader:
         """
         Google翻訳結果を取得する(英→日)
         """
-        url = 'https://translate.google.com/?hl=en&langpair=en%7Cja&text=' + urllib.parse.quote(s)
+        url = 'https://translate.google.com/?hl=en&langpair=en%7Cja&text=' + \
+            urllib.parse.quote(s)
         soup = self.get_web_page(url)
         res = soup.select_one("span.tlid-translation.translation")
         return res
