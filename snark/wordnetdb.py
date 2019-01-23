@@ -94,6 +94,42 @@ class WordNetDb:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.conn.close()
 
+    def get_synset_def_all(self, d, synset, lang='jpn'):
+        """
+        synsetに対応するsynset_defすべてをarrayに取得する
+        """
+        cur = self.conn.execute(
+            'select * from synset_def where (synset=? and lang=?)', (synset, lang))
+        for c in cur:
+            d.append(c)
+        return d
+
+    def _get_synset_def(self, gloss, lang='jpn'):
+        cur = self.conn.execute(
+            'select * from synset_def where (def=? and lang=?)', (gloss, lang))
+        c = cur.fetchone()
+        return c
+
+    def update_synset_def(self, synset, gloss, sid, lang='jpn', commit=True):
+        """
+        synset_defを作成する, glossが一致する場合は更新する
+        """
+        c = self._get_synset_def(gloss, lang)
+        if c != None:
+            self.conn.execute('UPDATE synset_def SET synset=?, sid=? where (def=? and lang=?)', (synset, sid, gloss, lang))
+        else:
+            c = (synset, lang, gloss, sid)
+            self.conn.execute('INSERT INTO synset_def VALUES(?,?,?,?)', c)
+
+        if commit:
+            self.conn.commit()
+
+    def commit(self):
+        """
+        commitする
+        """
+        self.conn.commit()
+
     def _create_word_id(self):
         return int(time.time() * 100)
 

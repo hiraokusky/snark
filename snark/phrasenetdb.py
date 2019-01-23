@@ -19,8 +19,8 @@ import re
 import json
 import sys,os
 
-# pip install git+https://github.com/hiraokusky/snark
-from snark import wordnetdb, kanadb
+from wordnetdb import WordNetDb
+from kanadb import KanaDb
 
 class PhraseNetDb:
     """
@@ -63,18 +63,70 @@ class PhraseNetDb:
     """
 
     # かな変換辞書
-    kn = kanadb.KanaDb()
+    kn = KanaDb()
 
     # 外部辞書
     startdict = pd.DataFrame()
 
-    def load(self):
+    # WordNetDb
+    wn = WordNetDb()
+
+    def load_file(self):
         """
         フレーズ辞書をロードする
         """
         self.startdict = pd.read_csv('dict/phrases.csv', header=None)
         self.startdict = self.startdict.fillna('')
-        
+
+    def load_all(self):
+        """
+        フレーズ辞書をWordNetDbからメモリにロードする
+        """
+        d = []
+        d = self.wn.get_synset_def_all(d, 'r')
+        d = self.wn.get_synset_def_all(d, 'a')
+        d = self.wn.get_synset_def_all(d, 'n')
+        d = self.wn.get_synset_def_all(d, 'p')
+        d = self.wn.get_synset_def_all(d, 't')
+        d = self.wn.get_synset_def_all(d, 'v')
+        d = self.wn.get_synset_def_all(d, 'w')
+        d = self.wn.get_synset_def_all(d, 'f')
+        d = self.wn.get_synset_def_all(d, 'e')
+        for c in d:
+            # print(c[0], c[1], c[2], c[3])
+            dict_pos = c[0]
+            dict_weight = c[3]
+            dict_pron = ''
+            cc = c[2].split()
+            if len(cc) > 1:
+                dict_pron = cc[0]
+                dict_word = cc[1]
+            elif len(cc) == 1:
+                dict_word = cc[0]
+            else:
+                continue
+            tmp_se = pd.Series( [dict_pos, dict_word, dict_weight, dict_pron ] )
+            self.startdict = self.startdict.append( tmp_se, ignore_index=True )
+
+    def save_all(self):
+        """
+        フレーズ辞書をWordNetDnに保存する
+        """
+        for p in self.startdict.values:
+            dict_pos = p[0]
+            if len(dict_pos) > 0 and dict_pos != 'synset':
+                dict_word = p[1]
+                dict_synset = p[2]
+                dict_pron = p[3]
+                if len(dict_pron) > 0:
+                    dict_word = dict_pron + ' ' + dict_word
+                print(dict_pos, dict_word)
+                self.wn.update_synset_def(dict_pos, dict_word, '0', commit=False)
+        self.wn.commit()
+
+    def add_synsetdef(self, synset, gloss, pos='n', lang='jpn'):
+        return
+
     def _match_phrase_type(self, t, word):
         for p in self.startdict.values:
             dict_pos = p[0]
@@ -106,6 +158,7 @@ class PhraseNetDb:
             dict_synset = p[2]
             dict_pron = p[3]
             q = [dict_pos, dict_word, dict_synset, dict_pron]
+            # print(dict_pos, dict_word, dict_synset, dict_pron)
 
             if len(dict_pos) > 0:
                 if len(pret) > 0:
@@ -238,11 +291,11 @@ class PhraseNetDb:
                     return w + e
         return None
 
-# p = PhraseNetDb()
-# p.load()
-# print(p.get_verb_ends('知ってるな', '知る'))
-# print(p.get_adj_ends('美しくってね', '美しい'))
-# print(p.get_phrases('知識'))
-# print(p.get_phrases('知識'))
-# print(p.get_phrases('知ってね'))
-# print(p.get_phrases('知ってね'))
+p = PhraseNetDb()
+p.load_all()
+# p.save_all()
+
+print(p.get_verb_ends('知ってるな', '知る'))
+print(p.get_adj_ends('美しくってね', '美しい'))
+print(p.get_phrases('知識'))
+print(p.get_phrases('知ってね'))
