@@ -13,11 +13,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from bs4 import BeautifulSoup
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
 import re
 import urllib.parse
+
+# pip install beautifulsoup4
+from bs4 import BeautifulSoup
+
+# pip install selenium
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
 
 
 class WebReader:

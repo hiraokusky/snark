@@ -20,8 +20,8 @@ import json
 import sys
 import os
 
-from wordnetdb import WordNetDb
-from kanadb import KanaDb
+# pip install git+https://github.com/hiraokusky/snark
+from snark import wordnetdb, kanadb
 
 
 class PhraseNetDb:
@@ -65,13 +65,13 @@ class PhraseNetDb:
     """
 
     # かな変換辞書
-    kn = KanaDb()
+    kn = kanadb.KanaDb()
 
     # 外部辞書
     startdict = pd.DataFrame()
 
     # WordNetDb
-    wn = WordNetDb()
+    wn = wordnetdb.WordNetDb()
 
     def load_file(self):
         """
