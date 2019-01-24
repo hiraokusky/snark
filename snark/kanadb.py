@@ -23,7 +23,7 @@ class KanaDb:
     def __init__(self):
         self.table = str.maketrans(self.kana_romaji)
 
-    def toRomaji(self, s):
+    def to_romaji(self, s):
         return s.translate(self.table)
 
     def is_hiragana(self, c):

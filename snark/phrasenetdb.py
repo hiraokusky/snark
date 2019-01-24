@@ -62,6 +62,18 @@ class PhraseNetDb:
     # 場所格 case_locative
     # 時間格 case_time
     # 経路格 case_path
+
+    フレーズネット
+    synset: 品詞
+    synset_def: フレーズ
+
+    フレーズの接続ルールを表現する
+    #i ねえ /e: 直前の音のルール(to_romajiした文字列)
+    /v#u れる: 品詞の並びのルール(synset), /を複数書くとOR条件, #を複数書くとOR条件
+    /n は /n である: フレーズの並びのルール
+
+    BNFを表現する
+    synset :== synset list
     """
 
     # かな変換辞書
@@ -126,6 +138,22 @@ class PhraseNetDb:
                 return True
         return False
 
+    def parse_conditions(self, s):
+        """
+        /a#b形式を配列に分解する
+        """
+        d = s.split('#')
+        if len(d) > 1:
+            # /がある
+            e = d[0].split('/')
+            if len(e) > 1:
+                return [e[1:], d[1:]]
+            return [[], d[1:]]
+        e = s.split('/')
+        if len(e) > 1:
+            return [e[1:], d[1:]]
+        return []
+
     def get_phrases(self, s, pre='', pret=''):
         """
         一致するフレーズを取得する
@@ -139,8 +167,11 @@ class PhraseNetDb:
         Returns
         -------
         先頭一致するフレーズの最長順のリスト
+        [[ フレーズ /直前の品詞#直前の発音 残りの文] ... ]
+        これを使い次をget_phrasesして、空だったものを候補から脱落させる
+        残ったもので候補リストを再構成する
         """
-        pre = self.kn.toRomaji(pre)
+        pre = self.kn.to_romaji(pre)
         l = 0
         matches = []
         for p in self.startdict.values:
@@ -284,6 +315,14 @@ class PhraseNetDb:
 
 
 # p = PhraseNetDb()
+# print(p.parse_conditions('/a'))
+# print(p.parse_conditions('/a/d'))
+# print(p.parse_conditions('/a#b'))
+# print(p.parse_conditions('#b'))
+# print(p.parse_conditions('#b#c'))
+# print(p.parse_conditions('/a/d#b'))
+# print(p.parse_conditions('/a/d#b#c'))
+
 # p.load_file()
 # p.save_all()
 # p.load_all()
