@@ -82,21 +82,20 @@ class PhraseNetDb:
     # 外部辞書
     startdict = pd.DataFrame()
 
-    # WordNetDb
-    wn = wordnetdb.WordNetDb()
-
-    def load_file(self):
+    def load_file(self, path):
         """
         フレーズ辞書をロードする
         """
-        self.startdict = pd.read_csv('dict/phrases.csv', header=None)
+        self.startdict = pd.read_csv(path, header=None)
         self.startdict = self.startdict.fillna('')
 
-    def load_all(self):
+    def load_db(self, path):
         """
         フレーズ辞書をWordNetDbからメモリにロードする
         """
-        d = self.wn.get_synset_def_all(
+        wn = wordnetdb.WordNetDb(path)
+
+        d = wn.get_synset_def_all(
             ['r', 'a', 'n', 'p', 't', 'v', 'w', 'f', 'e'])
         for c in d:
             dict_pos = c[0]
@@ -114,21 +113,23 @@ class PhraseNetDb:
             self.startdict = self.startdict.append(tmp_se, ignore_index=True)
             # print(dict_pos, dict_word, dict_src, dict_pron)
 
-    def save_all(self):
+    def save_db(self, path):
         """
         フレーズ辞書をWordNetDnに保存する
         """
+        wn = wordnetdb.WordNetDb(path)
+
         data = []
         for p in self.startdict.values:
             dict_pos = p[0]
             if len(dict_pos) > 0 and dict_pos != 'synset':
                 dict_word = p[1]
-                dict_synset = p[2]
-                dict_pron = p[3]
+                dict_synset = p[3]
+                dict_pron = p[2]
                 if len(dict_pron) > 0:
                     dict_word = dict_pron + ' ' + dict_word
                 data.append((dict_pos, 'jpn', dict_word, 'pnjpn.db'))
-        self.wn.insert_synset_def_all(data)
+        wn.insert_synset_def_all(data)
 
     def _match_phrase_type(self, t, word):
         for p in self.startdict.values:
@@ -177,8 +178,8 @@ class PhraseNetDb:
         for p in self.startdict.values:
             dict_pos = p[0]
             dict_word = p[1]
-            dict_synset = p[2]
-            dict_pron = p[3]
+            dict_synset = p[3]
+            dict_pron = p[2]
             q = [dict_pos, dict_word, dict_synset, dict_pron]
             # print(dict_pos, dict_word, dict_synset, dict_pron)
 
@@ -323,9 +324,9 @@ class PhraseNetDb:
 # print(p.parse_conditions('/a/d#b'))
 # print(p.parse_conditions('/a/d#b#c'))
 
-# p.load_file()
-# p.save_all()
-# p.load_all()
+# p.load_file('dict/phrases.csv')
+# p.save_db('db/wnjpn.db')
+# p.load_db('db/wnjpn.db')
 
 # print(p.get_verb_ends('知ってるな', '知る'))
 # print(p.get_adj_ends('美しくってね', '美しい'))

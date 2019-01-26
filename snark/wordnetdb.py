@@ -88,7 +88,7 @@ class SynLink:
 
 
 class WordNetDb:
-    def __init__(self):
+    def __init__(self, path):
         self.conn = sqlite3.connect('db/wnjpn.db')
 
     def __enter__(self):
@@ -686,7 +686,7 @@ def wordnetdb_test_print(wn, word):
 
 
 def wordnetdb_test():
-    wn = WordNetDb()
+    wn = WordNetDb('db/wnjpn.db')
 
     wn.add_word('にゃんこ', 'true_cat')
     wn.add_synsetdef('true_cat', 'にゃんこ大戦争')
@@ -708,7 +708,7 @@ def wordnetdb_test():
 
 
 def wordnetdb_test2():
-    wn = WordNetDb()
+    wn = WordNetDb('db/wnjpn.db')
     title = 'ルイス・キャロル'
     wn.add_frame('$root', title)
     frame = 'アリスの不思議な国'
