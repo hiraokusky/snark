@@ -1,0 +1,8 @@
+﻿synset1,link,synset2
+subject,s,s
+d,e,e
+d,f,g
+プードル,isa,犬
+犬,isa,動物
+犬,eq,dog
+スパイ,eq,犬
