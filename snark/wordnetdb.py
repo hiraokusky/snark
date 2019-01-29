@@ -89,7 +89,7 @@ class SynLink:
 
 class WordNetDb:
     def __init__(self, path):
-        self.conn = sqlite3.connect('db/wnjpn.db')
+        self.conn = sqlite3.connect(path)
 
     def __enter__(self):
         return self
@@ -112,7 +112,7 @@ class WordNetDb:
 
     def insert_synset_def_all(self, data):
         """
-        dataリストのうちsynset, defのペアが存在しないデータだけDBに追加する
+        dataリストのうちsynset, def, langのペアが存在しないデータだけDBに追加する
         """
         c = self.conn.cursor()
         inserts = []
@@ -133,11 +133,56 @@ class WordNetDb:
             c.executemany(sql, inserts)
         self.conn.commit()
 
-    def commit(self):
+    def get_same_words_by_synset(self, s):
+        info = []
+        if not s:
+            return info
+        words = self.get_words_by_sense(s)
+        for w in words:
+            info.append([s.synset, s.name, w.wordid, w.lemma, w.pos])
+        return info
+
+    def get_same_words_by_id(self, w):
         """
-        commitする
+        ワードと同じ概念を持つ同義語をすべて取得する
+        Parameters
+        ----------
+        w : Word
+            ワードオブジェクト
+        Returns
+        -------
+        [[synset-id synset id name pos-id] ...]
+            概念
+            概念のワード
         """
-        self.conn.commit()
+        info = []
+        if not w:
+            return info
+        cur0 = self.get_synsets(w)
+        for s in cur0:
+            info.extend(self.get_same_words_by_synset(s))
+        return info
+
+    def get_same_words_by_lemma(self, lemma):
+        """
+        単語と同じ概念を持つ同義語をすべて取得する
+        Parameters
+        ----------
+        lemma : str
+            単語
+        Returns
+        -------
+        [[synset-id synset id name pos-id] ...]
+            概念
+            概念のワード
+        """
+        cur = self.get_words(lemma)
+        result = []
+        for w in cur:
+            result.extend(self.get_same_words_by_id(w))
+        return result
+
+
 
     def _create_word_id(self):
         return int(time.time() * 100)
@@ -722,5 +767,12 @@ def wordnetdb_test2():
     for w in cur:
         print(w)
 
+def wordnetdb_test3():
+    wn = WordNetDb('db/wnjpn.db')
+    cur = wn.get_same_words_by_lemma('犬')
+    for w in cur:
+        print(w)
+
 # wordnetdb_test()
 # wordnetdb_test2()
+wordnetdb_test3()

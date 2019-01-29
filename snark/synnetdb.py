@@ -37,6 +37,13 @@ class SynNetDb:
     def save_file(self, path):
         self.startdict.to_csv(path)
 
+    def load_isa_words_from_db(self, path, key):
+        wn = wordnetdb.WordNetDb(path)
+
+        cur = wn.get_same_words_by_lemma(key)
+        for c in cur:
+            self.add_link(c[3], 'isa', c[1])
+
     def select(self, key):
         d = self.startdict
         res = d[d['synset1'] == key]
@@ -77,6 +84,8 @@ rn = SynNetDb()
 rn.load_file('dict/rn.csv')
 print(rn.select('d'))
 print(rn.select_link('犬', 'isa'))
+
+rn.load_isa_words_from_db('db/wnjpn.db', '犬')
 print(rn.select_eq('犬'))
-rn.add_link('ネコ', 'isa', '動物')
-print(rn.select_link_ref('動物', 'isa'))
+# rn.add_link('ネコ', 'isa', '動物')
+# print(rn.select_link_ref('動物', 'isa'))
