@@ -23,10 +23,11 @@ from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 
+# pip install rdflib
+import rdflib
 
 class WebReader:
     """
-    ALICE WEB
     Webから情報を取得する
     """
 
@@ -34,19 +35,42 @@ class WebReader:
     # @see https://selenium-python.readthedocs.io/api.html#module-selenium.webdriver.chrome.webdriver
     driver = None
 
+    rdf_graph = rdflib.Graph()
+
+    cache_path = ''
+
     def __init__(self):
         options = Options()
         options.set_headless(True)
         self.driver = webdriver.Chrome(chrome_options=options)
 
+    def use_cache(self, path):
+        self.cache_path = path
+
     def get_web_page(self, url):
         """
         Webページを取得してBeautifulSoupオブジェクトにする
         """
+        if len(self.cache_path) > 0:
+            # urlをencodeしたファイル名があればそれを返す
+            return
+
         self.driver.get(url)
         html = self.driver.page_source.encode('utf-8')
+
+        if len(self.cache_path) > 0:
+            # urlをencodeしてファイルに保存する
+            return
+
         soup = BeautifulSoup(html, "html.parser")
         return soup
+
+    def get_rdf(self, url):
+        """
+        RDFを取得する
+        """
+        self.rdf_graph.load(url)
+        return self.rdf_graph
 
     def google_translate_ja2en(self, s):
         """
@@ -73,3 +97,7 @@ class WebReader:
 # print(s)
 # s = web.google_translate_en2ja('all you need is attention.')
 # print(s)
+
+# rdf_graph = web.get_rdf('http://dbpedia.org/resource/Semantic_Web')
+# for s,p,o in rdf_graph:
+#     print(s,p,o)
