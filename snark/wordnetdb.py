@@ -775,4 +775,4 @@ def wordnetdb_test3():
 
 # wordnetdb_test()
 # wordnetdb_test2()
-wordnetdb_test3()
+# wordnetdb_test3()
