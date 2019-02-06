@@ -112,16 +112,3 @@ class SynNetDb:
         if len(res) == 0:
             tmp_se = pd.Series([synset1, link, synset2], index=['synset1', 'link', 'synset2'])
             self.startdict = self.startdict.append(tmp_se, ignore_index=True)
-
-# wordnetdbからデータをロードする
-# rn = SynNetDb(opts='v')
-# rn.load_file('dict/rn.csv')
-# print(rn.select_isa('犬'))
-# rn.add_link('犬', 'isa', '動物')
-# print(rn.select_same('犬'))
-
-# rn.load_same_words_from_db('db/wnjpn.db', '犬')
-# rn.save_file('dict/rn.csv')
-# print(rn.select_same('犬'))
-# rn.add_link('ネコ', 'isa', '動物')
-# print(rn.select_link_ref('動物', 'isa'))

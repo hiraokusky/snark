@@ -71,33 +71,3 @@ class WebReader:
         """
         self.rdf_graph.load(url)
         return self.rdf_graph
-
-    def google_translate_ja2en(self, s):
-        """
-        Google翻訳結果を取得する(日→英)
-        """
-        url = 'https://translate.google.com/?hl=ja&langpair=ja%7Cen&text=' + \
-            urllib.parse.quote(s)
-        soup = self.get_web_page(url)
-        res = soup.select_one("span.tlid-translation.translation")
-        return res
-
-    def google_translate_en2ja(self, s):
-        """
-        Google翻訳結果を取得する(英→日)
-        """
-        url = 'https://translate.google.com/?hl=en&langpair=en%7Cja&text=' + \
-            urllib.parse.quote(s)
-        soup = self.get_web_page(url)
-        res = soup.select_one("span.tlid-translation.translation")
-        return res
-
-# web = WebReader()
-# s = web.google_translate_ja2en('どのようにお調べしますか？')
-# print(s)
-# s = web.google_translate_en2ja('all you need is attention.')
-# print(s)
-
-# rdf_graph = web.get_rdf('http://dbpedia.org/resource/Semantic_Web')
-# for s,p,o in rdf_graph:
-#     print(s,p,o)

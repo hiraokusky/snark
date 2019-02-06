@@ -25,56 +25,6 @@ from snark import wordnetdb, kanadb
 
 
 class PhraseNetDb:
-    """
-    # root synset
-
-    r=
-    主に文の始めに現れるフレーズ。
-    接続詞の他、感嘆詞など。
-
-    a=形容詞
-    対象の名詞を見た心象を相手に伝えるためのフレーズ。意味は等価。
-
-    p:
-    名詞に接続するフレーズ。名詞に役割を与える。
-
-    t:
-    名詞で終わる文、つまり、等価を示す文の終わりに現れるフレーズ。
-    であろう、など。
-
-    v:
-    動詞
-
-    w:
-    動詞で終わる文、つまり、変化を示す文の終わりに現れるフレーズ。
-
-    f:
-    会話文の終わりに現れる、人の特徴を示すフレーズ。
-    ～だぜ、など。
-
-    # 深層格
-    # 動作主格 case_agentive
-    # 経験者格 case_experiencer
-    # 道具格 case_instrumental
-    # 対象格 case_objective
-    # 源泉格 case_source
-    # 目標格 case_goal
-    # 場所格 case_locative
-    # 時間格 case_time
-    # 経路格 case_path
-
-    フレーズネット
-    synset: 品詞
-    synset_def: フレーズ
-
-    フレーズの接続ルールを表現する
-    #i ねえ /e: 直前の音のルール(to_romajiした文字列)
-    /v#u れる: 品詞の並びのルール(synset), /を複数書くとOR条件, #を複数書くとOR条件
-    /n は /n である: フレーズの並びのルール
-
-    BNFを表現する
-    synset :== synset list
-    """
 
     # かな変換辞書
     kn = kanadb.KanaDb()
@@ -84,14 +34,14 @@ class PhraseNetDb:
 
     def load_file(self, path):
         """
-        フレーズ辞書をロードする
+        フレーズ辞書をファイルからロードする
         """
         self.startdict = pd.read_csv(path, header=None)
         self.startdict = self.startdict.fillna('')
 
     def load_db(self, path):
         """
-        フレーズ辞書をWordNetDbからメモリにロードする
+        フレーズ辞書をWordNetDbからロードする
         """
         wn = wordnetdb.WordNetDb(path)
 
@@ -111,7 +61,6 @@ class PhraseNetDb:
                 continue
             tmp_se = pd.Series([dict_pos, dict_word, dict_src, dict_pron])
             self.startdict = self.startdict.append(tmp_se, ignore_index=True)
-            # print(dict_pos, dict_word, dict_src, dict_pron)
 
     def save_db(self, path):
         """
@@ -128,7 +77,7 @@ class PhraseNetDb:
                 dict_pron = p[2]
                 if len(dict_pron) > 0:
                     dict_word = dict_pron + ' ' + dict_word
-                data.append((dict_pos, 'jpn', dict_word, 'pnjpn.db'))
+                data.append((dict_pos, 'jpn', dict_word, 'pn'))
         wn.insert_synset_def_all(data)
 
     def _match_phrase_type(self, t, word):
@@ -167,10 +116,10 @@ class PhraseNetDb:
 
         Returns
         -------
-        先頭一致するフレーズの最長順のリスト
         [[ フレーズ /直前の品詞#直前の発音 残りの文] ... ]
-        これを使い次をget_phrasesして、空だったものを候補から脱落させる
-        残ったもので候補リストを再構成する
+            先頭一致するフレーズの最長順のリスト
+            これを使い次をget_phrasesして、空だったものを候補から脱落させる
+            残ったもので候補リストを再構成する
         """
         pre = self.kn.to_romaji(pre)
         l = 0
@@ -313,22 +262,3 @@ class PhraseNetDb:
                 if s.startswith(w + e):
                     return w + e
         return None
-
-
-# p = PhraseNetDb()
-# print(p.parse_conditions('/a'))
-# print(p.parse_conditions('/a/d'))
-# print(p.parse_conditions('/a#b'))
-# print(p.parse_conditions('#b'))
-# print(p.parse_conditions('#b#c'))
-# print(p.parse_conditions('/a/d#b'))
-# print(p.parse_conditions('/a/d#b#c'))
-
-# p.load_file('dict/phrases.csv')
-# p.save_db('db/wnjpn.db')
-# p.load_db('db/wnjpn.db')
-
-# print(p.get_verb_ends('知ってるな', '知る'))
-# print(p.get_adj_ends('美しくってね', '美しい'))
-# print(p.get_phrases('知識'))
-# print(p.get_phrases('知ってね'))

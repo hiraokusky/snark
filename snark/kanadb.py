@@ -1,5 +1,5 @@
 """
-Copyright 2018 hiraokusky
+Copyright 2018-2019 hiraokusky
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -24,11 +24,32 @@ class KanaDb:
         self.table = str.maketrans(self.kana_romaji)
 
     def to_romaji(self, s):
+        """
+        平仮名をローマ字に変換する
+
+        Parameters
+        ----------
+        s : string
+            平仮名を含む文字列
+
+        Returns
+        -------
+        平仮名部分をローマ字に変換した文字列
+        """
         return s.translate(self.table)
 
     def is_hiragana(self, c):
-        return c in self.kana_romaji
+        """
+        文字が平仮名か判定する
 
-# kana = KanaDb()
-# print(kana.is_hiragana('知'))
-# print(kana.is_hiragana('ち'))
+        Parameters
+        ----------
+        c : char
+            文字
+            
+        Returns
+        -------
+        True: 平仮名である
+        False: 平仮名でない
+        """
+        return c in self.kana_romaji
