@@ -37,3 +37,11 @@ http://compling.hss.ntu.edu.sg/wnja/jpn/index.html
 ## WebReader
 
 Webコンテンツへのアクセスライブラリ
+
+## ExcelReader
+
+Excelファイルへのアクセスライブラリ
+
+## Fu
+
+ユーティリティライブラリ
