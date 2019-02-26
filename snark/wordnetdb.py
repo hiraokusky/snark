@@ -134,6 +134,9 @@ class WordNetDb:
         self.conn.commit()
 
     def get_same_words_by_synset(self, s):
+        """
+        同じ概念を持つ同義語をすべて取得する
+        """
         info = []
         if not s:
             return info
@@ -182,6 +185,74 @@ class WordNetDb:
             result.extend(self.get_same_words_by_id(w))
         return result
 
+    def get_words(self, name, pos=''):
+        """
+        言語によらずワードを取得する
+        """
+        cur = self._get_word_by_lemma_nolang(name, pos)
+        words = []
+        for row in cur:
+            words.append(Word(row[0], row[1], row[2], row[3], row[4]))
+        return words
+
+    def _get_word_by_lemma_nolang(self, name, pos=''):
+        """
+        言語によらずワードを取得する
+        """
+        if len(pos) > 0:
+            cur = self.conn.execute(
+                "select * from word where (lemma='%s' and pos='%s')" % (name, pos))
+        else:
+            cur = self.conn.execute(
+                "select * from word where lemma='%s'" % name)
+        return cur
+
+    # ワードから概念を取得
+    def get_synsets(self, word):
+        cur = self.conn.execute(
+            "select * from sense where wordid='%s'" % word.wordid)
+        synsets = []
+        for row in cur:
+            sense = Sense(row[0])
+            row2 = self.get_synset(sense.synset)
+            if row2 != None:
+                synsets.append(row2)
+        return synsets
+
+    # 概念IDから概念を取得
+    def get_synset(self, synsetid):
+        cur = self.conn.execute(
+            "select * from synset where synset='%s'" % synsetid)
+        w = cur.fetchone()
+        if w:
+            return SynSet(w[0], w[1], w[2], w[3])
+        else:
+            return None
+
+    def get_words_by_sense(self, synset):
+        """
+        概念IDに紐づくワードをすべて取得する
+        """
+        cur = self.conn.execute(
+            "select * from sense where synset='%s'" % synset.synset)
+        words = []
+        for row in cur:
+            w = self.get_word_by_id(row[1])
+            words.append(w)
+        return words
+
+    def get_word_by_id(self, wordid):
+        """
+        ワードIDからワードを取得する
+        """
+        cur = self.conn.execute(
+            "select * from word where wordid='%s'" % wordid)
+        w = cur.fetchone()
+        if w:
+            return Word(w[0], w[1], w[2], w[3], w[4])
+        else:
+            return None
+
 
 
     def _create_word_id(self):
@@ -193,15 +264,6 @@ class WordNetDb:
     def _get_word_by_name(self, name, lang='jpn'):
         cur = self.conn.execute(
             'select * from word where (lemma=? and lang=?)', (name, lang))
-        return cur
-
-    def _get_word_by_name_nolang(self, name, pos):
-        if len(pos) > 0:
-            cur = self.conn.execute(
-                "select * from word where (lemma='%s' and pos='%s')" % (name, pos))
-        else:
-            cur = self.conn.execute(
-                "select * from word where lemma='%s'" % name)
         return cur
 
     def _get_synset_by_name(self, name):
@@ -241,7 +303,7 @@ class WordNetDb:
             # なければワードに追加
             while True:
                 wid = self._create_word_id()
-                if self.get_word(wid) == None:
+                if self.get_word_by_id(wid) == None:
                     break
             w = (wid, lang, name, None, pos)
             self.conn.execute('INSERT INTO word VALUES(?,?,?,?,?)', w)
@@ -396,56 +458,6 @@ class WordNetDb:
 
         if commit:
             self.conn.commit()
-
-    # 名前からワードを取得
-    def get_words(self, name, pos=''):
-        cur = self._get_word_by_name_nolang(name, pos)
-        words = []
-        for row in cur:
-            words.append(Word(row[0], row[1], row[2], row[3], row[4]))
-        return words
-
-    # ワードIDからワードを取得
-    def get_word(self, wordid):
-        cur = self.conn.execute(
-            "select * from word where wordid='%s'" % wordid)
-        w = cur.fetchone()
-        if w:
-            return Word(w[0], w[1], w[2], w[3], w[4])
-        else:
-            return None
-
-    # 概念に紐づくワードを取得
-    def get_words_by_sense(self, synset):
-        cur = self.conn.execute(
-            "select * from sense where synset='%s'" % synset.synset)
-        words = []
-        for row in cur:
-            w = self.get_word(row[1])
-            words.append(w)
-        return words
-
-    # ワードから概念を取得
-    def get_synsets(self, word):
-        cur = self.conn.execute(
-            "select * from sense where wordid='%s'" % word.wordid)
-        synsets = []
-        for row in cur:
-            sense = Sense(row[0])
-            row2 = self.get_synset(sense.synset)
-            if row2 != None:
-                synsets.append(row2)
-        return synsets
-
-    # 概念IDから概念を取得
-    def get_synset(self, synsetid):
-        cur = self.conn.execute(
-            "select * from synset where synset='%s'" % synsetid)
-        w = cur.fetchone()
-        if w:
-            return SynSet(w[0], w[1], w[2], w[3])
-        else:
-            return None
 
     # 概念から説明を取得
     def get_synsetdefs(self, synset, lang='jpn'):
@@ -717,62 +729,3 @@ class WordNetDb:
             gloss += row1.gloss
         info.append([parent, "synsetdef", s.synset, s.name, s.pos, gloss])
         return info
-
-
-def wordnetdb_test_print(wn, word):
-    print(word)
-    cur = wn.get_word_info_by_lemma(word)
-    for w in cur:
-        print(w)
-    print('SynLink')
-    cur = wn.get_wordlink_info_by_lemma(word)
-    for w in cur:
-        print(w)
-
-
-def wordnetdb_test():
-    wn = WordNetDb('db/wnjpn.db')
-
-    wn.add_word('にゃんこ', 'true_cat')
-    wn.add_synsetdef('true_cat', 'にゃんこ大戦争')
-    wordnetdb_test_print(wn, 'にゃんこ')
-
-    wn.delete_word('にゃんこ')
-    wn.delete_synsetdef('にゃんこ大戦争')
-    wordnetdb_test_print(wn, 'ネコ')
-
-    wn.add_word('アリス')
-    wn.add_synlink('アリス', 'n', 'アリスの不思議な国', 'n', '主人公')
-    wordnetdb_test_print(wn, 'アリス')
-
-    wn.delete_word('アリス')
-    wordnetdb_test_print(wn, 'アリス')
-
-    result = wn.get_imagenet_uris('アリス')
-    print(result)
-
-
-def wordnetdb_test2():
-    wn = WordNetDb('db/wnjpn.db')
-    title = 'ルイス・キャロル'
-    wn.add_frame('$root', title)
-    frame = 'アリスの不思議な国'
-    wn.add_frame(title, frame)
-    phrase = frame
-    phrase = wn.add_phrase(phrase, '主人公')
-    phrase = wn.add_phrase(phrase, 'は')
-    phrase = wn.add_phrase(phrase, 'アリス')
-
-    cur = wn.get_synlink_next_by_name(frame)
-    for w in cur:
-        print(w)
-
-def wordnetdb_test3():
-    wn = WordNetDb('db/wnjpn.db')
-    cur = wn.get_same_words_by_lemma('犬')
-    for w in cur:
-        print(w)
-
-# wordnetdb_test()
-# wordnetdb_test2()
-# wordnetdb_test3()
