@@ -22,7 +22,7 @@ import os
 
 # pip install git+https://github.com/hiraokusky/snark
 from snark import wordnetdb, kanadb
-
+from snark import fu
 
 class PhraseNetDb:
 
@@ -31,6 +31,9 @@ class PhraseNetDb:
 
     # 外部辞書
     startdict = pd.DataFrame()
+
+    def __init__(self, path):
+        self.wn = wordnetdb.WordNetDb(path)
 
     def load_file(self, path):
         """
@@ -261,4 +264,71 @@ class PhraseNetDb:
             for e in d:
                 if s.startswith(w + e):
                     return w + e
+        return None
+
+    def add_context(self, tokens, context):
+        """
+        解析したトークンからコンテキストをつくる
+        トークンからイメージスキーマ言語をつくる
+        """
+        # 1. 記述フレーム特定
+        # その文の記述の意図を把握
+
+        # 項目のsynsetを利用して項目の意味を知る
+        # →すごい、結構いける
+
+        # 日時
+        if ':date' in tokens[0][0]:
+            if self.match_time_schema(context, tokens):
+                return
+
+    def match_time_schema(self, context, tokens):
+        # 日付と同じ意味を持つ単語を取得して,つなぎにする
+        tword = self.get_synonyms('日付')
+
+        schema = [[ tword, '', '' ], [':', '', ''], ['', 'z', ''], ['年', '', ''], ['', 'z', ''], ['月', '', ''],['', 'z', ''], ['日', '', '']]
+        if self.match_schema(schema, tokens) != None:
+            context.append(['date', schema[2][0], schema[4][0], schema[6][0]])
+            return True
+
+        schema = [[ tword, '', '' ], [':', '', ''], ['', 'z', ''], ['月', '', ''], ['', 'z', ''], ['日', '', '']]
+        if self.match_schema(schema, tokens) != None:
+            context.append(['date', schema[2][0], schema[4][0]])
+            return True
+
+        return False
+        
+    def get_synonyms(self, word):
+        """
+        類義語リストを作る
+        """
+        return fu.array2_to_str(self.wn.get_same_words_by_lemma(word), 3)
+
+    def match_schema(self, schema, tokens):
+        """
+        トークン列からスキーマを見つける
+        """
+        i = 0
+        for t in tokens:
+            word = t[0]
+            pos = t[1]
+            typ = t[2]
+            tword = schema[i][0]
+            tpos = schema[i][1]
+            ttyp = schema[i][2]
+            if len(tword) > 0 and not fu.match(word, tword):
+                continue
+            if len(tpos) > 0:
+                if not fu.match(pos, tpos):
+                    continue
+                else:
+                    schema[i][0] = word
+            if len(ttyp) > 0:
+                if not fu.match(typ, ttyp):
+                    continue
+                else:
+                    schema[i][0] = word
+            i += 1
+            if len(schema) == i:
+                return tokens[i:]
         return None
